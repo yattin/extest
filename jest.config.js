@@ -17,15 +17,14 @@ module.exports = {
   testTimeout: 30000,
   maxWorkers: 1, // 避免端口冲突
   extensionsToTreatAsEsm: ['.ts'],
-  transformIgnorePatterns: [
-    'node_modules/(?!(chrome-launcher|puppeteer-core)/)'
-  ],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   globals: {
     'ts-jest': {
-      useESM: true
+      tsconfig: {
+        module: 'commonjs'
+      }
     }
   }
 };

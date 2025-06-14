@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
-    "example": "tsc && node dist/example.js",
+    "example": "ts-node test/example.ts",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
