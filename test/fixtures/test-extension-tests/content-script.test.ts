@@ -1,3 +1,9 @@
+/**
+ * 基础测试插件 - Content Script 测试
+ * 使用框架全局设置 (test/setup.ts)
+ * 测试内容脚本的注入和页面交互功能
+ */
+
 describe('Content Script', () => {
   test('should inject elements into page', async () => {
     const { driver, mockServer } = global.testContext;

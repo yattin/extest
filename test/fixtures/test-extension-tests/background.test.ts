@@ -1,3 +1,8 @@
+/**
+ * 基础测试插件 - Background Script 测试
+ * 使用框架全局设置 (test/setup.ts)
+ */
+
 describe('Background Script', () => {
   test('should initialize storage', async () => {
     const { driver } = global.testContext;

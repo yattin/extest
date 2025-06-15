@@ -23,6 +23,118 @@
 pnpm install
 ```
 
+## 在其他项目中使用
+
+此框架被设计为 npm 包，可以在其他浏览器扩展项目中作为开发依赖项使用。
+
+### 方式一：发布到 npm（生产环境）
+
+1. **构建并发布框架**
+
+   ```bash
+   # 在 extest 项目目录中
+   pnpm run build
+   npm publish
+   ```
+
+2. **在你的扩展项目中安装**
+
+   ```bash
+   # 在你的浏览器扩展项目中
+   pnpm add -D extest
+   ```
+
+### 方式二：本地链接（开发环境）
+
+推荐在开发阶段使用 `pnpm link`，这样可以实时查看框架的修改效果。
+
+1. **在 extest 项目中创建全局链接**
+
+   ```bash
+   # 在 extest 项目目录中
+   cd path/to/extest
+   pnpm link --global
+   ```
+
+2. **在你的扩展项目中使用链接**
+
+   ```bash
+   # 在你的浏览器扩展项目目录中
+   cd path/to/your-extension-project
+   pnpm link --global extest
+   ```
+
+3. **取消链接（可选）**
+
+   当完成开发后，可以取消链接并安装正式版本：
+
+   ```bash
+   # 在你的浏览器扩展项目中
+   pnpm unlink extest
+   pnpm add -D extest
+   ```
+
+### 在其他项目中的配置
+
+安装完成后，需要在你的扩展项目中进行配置：
+
+1. **配置 Jest**
+
+   创建或修改 `jest.config.js`：
+
+   ```javascript
+   module.exports = {
+     testEnvironment: 'node',
+     globalSetup: './test/setup.js',
+     globalTeardown: './test/teardown.js',
+     testTimeout: 30000,
+   };
+   ```
+
+2. **创建测试设置文件**
+
+   创建 `test/setup.js`：
+
+   ```javascript
+   const path = require('path');
+   const { ExtensionTestFramework } = require('extest');
+
+   module.exports = async () => {
+     const framework = new ExtensionTestFramework();
+     const context = await framework.setup({
+       extensionPath: path.join(__dirname, '../dist'), // 你的扩展构建目录
+       mockServerPort: 9000,
+     });
+
+     global.testContext = context;
+     global.framework = framework;
+   };
+   ```
+
+   创建 `test/teardown.js`：
+
+   ```javascript
+   module.exports = async () => {
+     if (global.framework) {
+       await global.framework.teardown();
+     }
+   };
+   ```
+
+3. **编写测试用例**
+
+   ```javascript
+   describe('Extension Tests', () => {
+     const { driver } = global.testContext;
+
+     test('should test popup functionality', async () => {
+       const popup = await driver.openPopup();
+       // 你的测试逻辑
+       await popup.close();
+     });
+   });
+   ```
+
 ## 快速开始
 
 ### 1. 准备测试

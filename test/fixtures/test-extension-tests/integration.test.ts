@@ -1,3 +1,9 @@
+/**
+ * 基础测试插件 - 集成测试
+ * 使用框架全局设置 (test/setup.ts)
+ * 测试背景脚本、弹窗和内容脚本的协作
+ */
+
 describe('Integration Tests', () => {
   test('should work across background, popup and content script', async () => {
     const { driver, mockServer } = global.testContext;

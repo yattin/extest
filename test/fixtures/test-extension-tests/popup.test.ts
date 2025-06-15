@@ -1,3 +1,9 @@
+/**
+ * 基础测试插件 - Popup UI 测试
+ * 使用框架全局设置 (test/setup.ts)
+ * 测试弹窗界面的交互和状态同步功能
+ */
+
 describe('Popup UI', () => {
   test('should toggle dark mode', async () => {
     const { driver } = global.testContext;

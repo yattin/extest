@@ -1,0 +1,476 @@
+# Project Guide for LLM Agents
+
+## 1. Project Overview
+This project, named "extest", is an end-to-end testing framework for browser extensions, specifically designed for Manifest V3. It operates directly on the Chrome DevTools Protocol (CDP) for lightweight and high-performance testing in a real browser environment.
+
+## 2. Tech Stack
+- **Language**: TypeScript
+- **Runtime**: Node.js
+- **Testing Framework**: Jest
+- **Core Libraries**:
+  - `puppeteer-core`: For browser automation via CDP.
+  - `chrome-launcher`: To launch Chrome instances.
+  - `express`: Used for the built-in mock server.
+  - `ts-jest`: TypeScript preprocessor for Jest.
+
+## 3. Project Structure
+- `src/`: Contains the core source code of the framework. The main entry point is `src/index.ts`.
+- `test/`: All test files, setup/teardown scripts, and test fixtures.
+- `dist/`: Compiled JavaScript output from the TypeScript source. This is the distributable code.
+- `coverage/`: Directory where code coverage reports are generated.
+
+## 4. Key Commands (using pnpm)
+- **Installation**: `pnpm install`
+- **Build**: `pnpm build` (Compiles TypeScript to `dist/`)
+- **Run all tests**: `pnpm test`
+- **Run unit tests only**: `pnpm test:unit`
+- **Run a single test file**: `pnpm test <path/to/test/file.test.ts>`
+- **Run tests in watch mode**: `pnpm run test:watch`
+- **Generate coverage report**: `pnpm run test:coverage`
+- **Run the example script**: `pnpm run example`
+
+## 5. Coding Conventions & Style
+- **Language**: All code is written in TypeScript with strict mode enabled (`"strict": true` in `tsconfig.json`).
+- **Module System**: The project uses CommonJS modules.
+- **Testing**:
+  - Tests are located in the `test/` directory.
+  - Test files follow the pattern `*.test.ts` or `*.spec.ts`.
+  - Global test context (e.g., `driver`, `mockServer`) is accessed via `global.testContext`, which is set up in `test/setup.ts`.
+  - Asynchronous operations must use `async/await`. The default test timeout is 30 seconds.
+- **Code Style**: Follow the existing code style found in the `src/` and `test/` directories. The `README.md` provides clear examples of how to write tests and interact with the framework's API.
+- **Dependencies**: Use `pnpm` for package management. Check `package.json` before adding new dependencies.
+
+## 6. Public API Reference
+
+### Core Classes
+
+#### ExtensionTestFramework
+Main framework class that orchestrates the testing environment.
+
+```typescript
+class ExtensionTestFramework {
+  async setup(config: ExtensionTestConfig): Promise<TestContext>
+  async teardown(): Promise<void>
+  getContext(): TestContext | null
+}
+```
+
+**Methods:**
+- `setup(config)`: Initializes the test environment with Chrome, extension targets, and mock server
+- `teardown()`: Cleans up all resources including Chrome instance and mock server
+- `getContext()`: Returns the current test context or null
+
+#### ExtensionDriver
+Interface for interacting with browser extension components.
+
+```typescript
+interface ExtensionDriver {
+  getExtensionId(): string
+  background(): Promise<CDPSession>
+  openPopup(): Promise<Page>
+  openOptions(): Promise<Page>
+  createContentPage(url?: string): Promise<Page>
+  enableNetworkMocking(): Promise<void>
+  mockRequest(pattern: string, response: any): Promise<void>
+  getCoverage(): Promise<any>
+  cleanup(): Promise<void>
+}
+```
+
+**Methods:**
+- `getExtensionId()`: Returns the extension ID
+- `background()`: Gets CDP session for background script/service worker
+- `openPopup()`: Opens extension popup and returns Page object
+- `openOptions()`: Opens extension options page and returns Page object
+- `createContentPage(url)`: Creates a new page for content script testing
+- `enableNetworkMocking()`: Enables request interception for mocking
+- `mockRequest(pattern, response)`: Mocks HTTP requests matching pattern
+- `getCoverage()`: Collects code coverage data
+- `cleanup()`: Closes all pages and sessions
+
+#### MockServer
+Built-in HTTP server for testing and mocking.
+
+```typescript
+interface MockServer {
+  port: number
+  url: string
+  close(): Promise<void>
+}
+```
+
+**Properties:**
+- `port`: Server port number
+- `url`: Full server URL (http://localhost:{port})
+
+**Built-in Routes:**
+- `GET /test-page`: Basic HTML test page
+- `GET /api/test`: JSON test API endpoint
+- `POST /api/data`: Echo POST data endpoint
+- `ALL /mock/*`: Dynamic mock routes
+
+### Configuration Types
+
+#### ExtensionTestConfig
+```typescript
+interface ExtensionTestConfig {
+  extensionPath: string        // Path to extension directory
+  headless?: boolean          // Run Chrome in headless mode (default: false)
+  debugPort?: number          // Chrome debug port
+  chromeFlags?: string[]      // Additional Chrome flags
+  timeout?: number            // Test timeout in ms
+  mockServerPort?: number     // Mock server port (0 = random)
+}
+```
+
+#### TestContext
+```typescript
+interface TestContext {
+  chrome: ChromeInstance      // Chrome browser instance
+  driver: ExtensionDriver     // Extension driver interface
+  mockServer: MockServer      // Mock HTTP server
+}
+```
+
+## 7. Usage Examples
+
+### Basic Setup in Jest
+
+**jest.config.js:**
+```javascript
+module.exports = {
+  testEnvironment: 'node',
+  globalSetup: './test/setup.js',
+  globalTeardown: './test/teardown.js',
+  testTimeout: 30000,
+  transform: {
+    '^.+\\.ts$': 'ts-jest',
+  },
+};
+```
+
+**test/setup.js:**
+```javascript
+const path = require('path');
+const { ExtensionTestFramework } = require('extest');
+
+module.exports = async () => {
+  const framework = new ExtensionTestFramework();
+  const context = await framework.setup({
+    extensionPath: path.join(__dirname, 'fixtures/test-extension'),
+    headless: process.env.CI === 'true',
+    mockServerPort: 9000,
+  });
+
+  global.testContext = context;
+  global.framework = framework;
+};
+```
+
+**test/teardown.js:**
+```javascript
+module.exports = async () => {
+  if (global.framework) {
+    await global.framework.teardown();
+  }
+};
+```
+
+### Background Script Testing
+
+```typescript
+describe('Background Script Tests', () => {
+  const { driver } = global.testContext;
+
+  test('should evaluate expressions in background context', async () => {
+    const bg = await driver.background();
+    
+    const result = await bg.send('Runtime.evaluate', {
+      expression: 'chrome.runtime.getManifest().name',
+      awaitPromise: true,
+    });
+    
+    expect(result.result.value).toBe('Test Extension');
+  });
+
+  test('should call background script functions', async () => {
+    const bg = await driver.background();
+    
+    const result = await bg.send('Runtime.evaluate', {
+      expression: 'myGlobalFunction("test")',
+      awaitPromise: true,
+    });
+    
+    expect(result.result.value).toBe('test-processed');
+  });
+});
+```
+
+### Popup Testing
+
+```typescript
+describe('Popup Tests', () => {
+  const { driver } = global.testContext;
+
+  test('should interact with popup elements', async () => {
+    const popup = await driver.openPopup();
+    
+    await popup.waitForSelector('#status');
+    await popup.click('#action-button');
+    
+    const statusText = await popup.$eval('#status', el => el.textContent);
+    expect(statusText).toBe('Action completed');
+    
+    await popup.close();
+  });
+
+  test('should handle popup events', async () => {
+    const popup = await driver.openPopup();
+    
+    const inputValue = 'test input';
+    await popup.type('#input-field', inputValue);
+    await popup.click('#submit-button');
+    
+    await popup.waitForSelector('.success-message');
+    const message = await popup.$eval('.success-message', el => el.textContent);
+    expect(message).toContain(inputValue);
+    
+    await popup.close();
+  });
+});
+```
+
+### Content Script Testing
+
+```typescript
+describe('Content Script Tests', () => {
+  const { driver, mockServer } = global.testContext;
+
+  test('should inject content script', async () => {
+    const page = await driver.createContentPage(`${mockServer.url}/test-page`);
+    
+    // Wait for content script to inject elements
+    await page.waitForSelector('.extension-injected', { timeout: 5000 });
+    
+    const injectedContent = await page.$eval('.extension-injected', el => el.textContent);
+    expect(injectedContent).toContain('Injected by extension');
+    
+    await page.close();
+  });
+
+  test('should communicate with background script', async () => {
+    const page = await driver.createContentPage(`${mockServer.url}/test-page`);
+    
+    const response = await page.evaluate(async () => {
+      return new Promise((resolve) => {
+        chrome.runtime.sendMessage({ action: 'test' }, resolve);
+      });
+    });
+    
+    expect(response.success).toBe(true);
+    await page.close();
+  });
+});
+```
+
+### Network Mocking
+
+```typescript
+describe('Network Mocking Tests', () => {
+  const { driver, mockServer } = global.testContext;
+
+  test('should mock API requests', async () => {
+    await driver.mockRequest('/api/user', {
+      id: 1,
+      name: 'Mock User',
+      email: 'mock@example.com'
+    });
+    
+    const page = await driver.createContentPage();
+    
+    const userData = await page.evaluate(async (apiUrl) => {
+      const response = await fetch(apiUrl);
+      return response.json();
+    }, `${mockServer.url}/api/user`);
+    
+    expect(userData.name).toBe('Mock User');
+    await page.close();
+  });
+
+  test('should mock multiple endpoints', async () => {
+    await driver.mockRequest('/api/posts', [
+      { id: 1, title: 'Test Post 1' },
+      { id: 2, title: 'Test Post 2' }
+    ]);
+    
+    await driver.mockRequest('/api/user/profile', {
+      username: 'testuser',
+      avatar: 'avatar.png'
+    });
+    
+    const page = await driver.createContentPage();
+    
+    const [posts, profile] = await page.evaluate(async (baseUrl) => {
+      const [postsRes, profileRes] = await Promise.all([
+        fetch(`${baseUrl}/api/posts`),
+        fetch(`${baseUrl}/api/user/profile`)
+      ]);
+      return [await postsRes.json(), await profileRes.json()];
+    }, mockServer.url);
+    
+    expect(posts).toHaveLength(2);
+    expect(profile.username).toBe('testuser');
+    
+    await page.close();
+  });
+});
+```
+
+### Options Page Testing
+
+```typescript
+describe('Options Page Tests', () => {
+  const { driver } = global.testContext;
+
+  test('should save and load preferences', async () => {
+    const options = await driver.openOptions();
+    
+    await options.check('#enable-feature');
+    await options.type('#api-key', 'test-api-key');
+    await options.click('#save-button');
+    
+    await options.waitForSelector('.saved-indicator');
+    
+    // Reload options page
+    await options.reload();
+    await options.waitForSelector('#enable-feature');
+    
+    const isChecked = await options.$eval('#enable-feature', el => el.checked);
+    const apiKey = await options.$eval('#api-key', el => el.value);
+    
+    expect(isChecked).toBe(true);
+    expect(apiKey).toBe('test-api-key');
+    
+    await options.close();
+  });
+});
+```
+
+### Code Coverage
+
+```typescript
+afterAll(async () => {
+  const { driver } = global.testContext;
+  
+  const coverage = await driver.getCoverage();
+  
+  // Coverage includes background and page coverage
+  expect(coverage.background).toBeDefined();
+  expect(coverage.pages).toBeInstanceOf(Array);
+  
+  // Can be integrated with Istanbul/NYC for reporting
+  if (coverage.background) {
+    // Process background coverage
+  }
+  
+  coverage.pages.forEach((pageCoverage, index) => {
+    // Process page coverage
+  });
+});
+```
+
+## 8. Best Practices
+
+### Test Organization
+- Group related tests in describe blocks
+- Use beforeEach/afterEach for setup/cleanup
+- Always close pages after tests to prevent memory leaks
+- Use descriptive test names that explain the expected behavior
+
+### Error Handling
+- Always wrap CDP calls in try-catch blocks
+- Use proper timeouts for waitForSelector calls
+- Handle extension loading failures gracefully
+- Check if pages are closed before attempting operations
+
+### Performance
+- Reuse browser instances when possible
+- Close unused pages promptly
+- Use headless mode in CI environments
+- Limit concurrent tests to prevent resource exhaustion
+
+### Debugging
+- Use `headless: false` for visual debugging
+- Enable Chrome DevTools when needed
+- Use console.log in test pages for debugging
+- Check Chrome process logs for errors
+
+## 9. Common Patterns
+
+### Waiting for Extension Initialization
+```typescript
+const bg = await driver.background();
+await bg.send('Runtime.evaluate', {
+  expression: 'new Promise(resolve => chrome.runtime.onStartup.addListener(resolve))',
+  awaitPromise: true,
+});
+```
+
+### Handling Dynamic Content
+```typescript
+const page = await driver.createContentPage(url);
+await page.waitForFunction(() => document.readyState === 'complete');
+await page.waitForSelector('.dynamic-content', { visible: true });
+```
+
+### Testing Message Passing
+```typescript
+// In content script test
+const response = await page.evaluate(() => {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: 'GET_DATA' }, resolve);
+  });
+});
+```
+
+### Custom Matchers
+```typescript
+expect.extend({
+  toHaveExtensionId(received, expected) {
+    const pass = received.includes(`chrome-extension://${expected}`);
+    return {
+      message: () => `expected ${received} to contain extension ID ${expected}`,
+      pass,
+    };
+  },
+});
+```
+
+## 10. Troubleshooting
+
+### Common Issues
+- **Target not found**: Ensure extension manifest.json is valid and extension loads properly
+- **Timeout errors**: Increase timeout values or add proper wait conditions
+- **Permission errors**: Ensure extension has required permissions in manifest
+- **Port conflicts**: Use random port (0) for mock server or check for port availability
+
+### Debug Mode
+```typescript
+// Enable Chrome debugging
+const context = await framework.setup({
+  extensionPath,
+  headless: false,
+  chromeFlags: ['--auto-open-devtools-for-tabs'],
+});
+```
+
+### Logging
+```typescript
+// Enable CDP protocol logging
+const bg = await driver.background();
+bg.on('Runtime.consoleAPICalled', (event) => {
+  console.log('Background log:', event.args);
+});
+```
+
+This framework provides comprehensive testing capabilities for modern browser extensions with a focus on reliability, performance, and ease of use.
