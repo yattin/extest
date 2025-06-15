@@ -8,11 +8,16 @@ export class ExtensionTestFramework {
   private context: TestContext | null = null;
 
   async setup(config: ExtensionTestConfig): Promise<TestContext> {
+
+    console.log('Setting up test context with config:', config);
+
     // 启动 Chrome
     const chrome = await ChromeLauncher.start(config);
+    console.log(`Chrome launched on port ${chrome.port}`);
     
     // 启动 Mock 服务器
     const mockServer = new MockServerImpl(config.mockServerPort);
+    console.log(`Mock server started on port ${config.mockServerPort}`);
     
     // 查找扩展目标
     const targetManager = new TargetManager(chrome.browser);
@@ -32,6 +37,7 @@ export class ExtensionTestFramework {
 
   async teardown(): Promise<void> {
     if (this.context) {
+      console.log('Tearing down test context...');
       await this.context.driver.cleanup();
       await this.context.mockServer.close();
       await ChromeLauncher.stop();

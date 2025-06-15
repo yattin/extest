@@ -52,10 +52,10 @@ describe('Integration Tests', () => {
     const page = await driver.createContentPage(`${mockServer.url}/test-page`);
     
     // 测试模拟的API响应
-    const response = await page.evaluate(async () => {
-      const resp = await fetch('/api/test');
+    const response = await page.evaluate(async (url) => {
+      const resp = await fetch(`${url}/api/test`);
       return resp.json();
-    });
+    }, mockServer.url);
     
     expect(response.mocked).toBe(true);
     expect(response.data).toBe('test');

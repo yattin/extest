@@ -14,13 +14,13 @@ export class ChromeLauncher {
       config.headless ? '--headless=new' : '',
       `--disable-extensions-except=${config.extensionPath}`,
       `--load-extension=${config.extensionPath}`,
-      `--remote-debugging-port=${config.debugPort || 9222}`,
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
+      // `--remote-debugging-port=${config.debugPort || 9222}`,
+      // '--no-sandbox',
+      // '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      '--disable-web-security',
-      '--disable-features=TranslateUI',
-      '--disable-ipc-flooding-protection',
+      // '--disable-web-security',
+      // '--disable-features=TranslateUI',
+      // '--disable-ipc-flooding-protection',
       ...(config.chromeFlags || [])
     ].filter(Boolean);
 
@@ -29,10 +29,14 @@ export class ChromeLauncher {
       handleSIGINT: false,
     });
 
+    console.log(`Chrome launched with PID: ${chrome.pid} on port: ${chrome.port}`);
+
     const browser = await puppeteer.connect({
       browserURL: `http://localhost:${chrome.port}`,
       defaultViewport: null,
     });
+
+    console.log(`Connected to Chrome browser at http://localhost:${chrome.port}`);
 
     this.instance = {
       process: chrome.process,
@@ -46,7 +50,7 @@ export class ChromeLauncher {
   static async stop(): Promise<void> {
     if (this.instance) {
       try {
-        await this.instance.browser.close();
+        await this.instance.browser.disconnect();
         this.instance.process.kill('SIGTERM');
       } catch (error) {
         console.warn('Error stopping Chrome:', error);

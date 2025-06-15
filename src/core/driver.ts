@@ -7,6 +7,7 @@ export class ExtensionDriverImpl implements ExtensionDriver {
   private targetManager: TargetManager;
   private backgroundSession: CDPSession | null = null;
   private mockingEnabled = false;
+  private mockResponses: Map<string, any> = new Map();
 
   constructor(
     private browser: Browser,
@@ -53,7 +54,7 @@ export class ExtensionDriverImpl implements ExtensionDriver {
   async createContentPage(url = 'about:blank'): Promise<Page> {
     const page = await this.browser.newPage();
     if (url !== 'about:blank') {
-      await page.goto(url);
+      await page.goto(url, { waitUntil: 'networkidle0' });
     }
     return page;
   }
@@ -61,30 +62,39 @@ export class ExtensionDriverImpl implements ExtensionDriver {
   async enableNetworkMocking(): Promise<void> {
     if (this.mockingEnabled) return;
 
+    this.browser.on('targetcreated', async target => {
+      const page = await target.page();
+      if (page) {
+        await this.setupRequestInterception(page);
+      }
+    });
+
     const pages = await this.browser.pages();
     for (const page of pages) {
-      await page.setRequestInterception(true);
+      await this.setupRequestInterception(page);
     }
     this.mockingEnabled = true;
   }
 
-  async mockRequest(pattern: string, response: any): Promise<void> {
-    await this.enableNetworkMocking();
-    
-    const pages = await this.browser.pages();
-    for (const page of pages) {
-      page.on('request', request => {
+  private async setupRequestInterception(page: Page): Promise<void> {
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+      for (const [pattern, response] of this.mockResponses.entries()) {
         if (request.url().includes(pattern)) {
-          request.respond({
+          return request.respond({
             status: 200,
             contentType: 'application/json',
             body: JSON.stringify(response),
           });
-        } else {
-          request.continue();
         }
-      });
-    }
+      }
+      return request.continue();
+    });
+  }
+
+  async mockRequest(pattern: string, response: any): Promise<void> {
+    await this.enableNetworkMocking();
+    this.mockResponses.set(pattern, response);
   }
 
   async getCoverage(): Promise<any> {
@@ -128,10 +138,12 @@ export class ExtensionDriverImpl implements ExtensionDriver {
 
     const pages = await this.browser.pages();
     for (const page of pages) {
-      try {
-        await page.close();
-      } catch (error) {
-        console.warn('Failed to close page:', error);
+      if (!page.isClosed()) {
+        try {
+          await page.close({ runBeforeUnload: false });
+        } catch (error) {
+          console.warn(`Failed to close page: ${page.url()}`, error);
+        }
       }
     }
   }

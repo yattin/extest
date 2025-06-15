@@ -5,25 +5,22 @@ export class TargetManager {
   constructor(private browser: Browser) {}
 
   async findExtensionTargets(): Promise<ExtensionTargets> {
-    const targets = await this.browser.targets();
-    
-    // 查找 background target
-    const backgroundTarget = targets.find(target => {
+    // 等待 background target 出现
+    const backgroundTarget = await this.waitForTarget(target => {
       const url = target.url();
       const type = target.type();
       return (type === 'background_page' || type === 'service_worker') &&
              url.startsWith('chrome-extension://');
     });
 
-    if (!backgroundTarget) {
-      throw new Error('Extension background target not found');
-    }
-
+    // 获取所有 targets
+    const targets = await this.browser.targets();
+    
     // 提取 extension ID
     const extensionId = this.extractExtensionId(backgroundTarget.url());
     
     // 查找其他相关 targets
-    const popupTarget = targets.find(target => 
+    const popupTarget = targets.find(target =>
       target.url().includes(`chrome-extension://${extensionId}/popup.html`)
     );
     
