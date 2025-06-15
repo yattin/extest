@@ -13,11 +13,11 @@ describe('Framework Quick Verification', () => {
     expect(typeof framework.teardown).toBe('function');
   });
 
-  // test('should export all required types and classes', () => {
-  //   const exports = require('../dist/index.js');
-  //   expect(exports.ChromeLauncher).toBeDefined();
-  //   expect(exports.ExtensionDriverImpl).toBeDefined();
-  //   expect(exports.TargetManager).toBeDefined();
-  //   expect(exports.MockServerImpl).toBeDefined();
-  // });
+  test('should export all required types and classes', () => {
+    const exports = require('../dist/index.js');
+    expect(exports.ChromeLauncher).toBeDefined();
+    expect(exports.ExtensionDriverImpl).toBeDefined();
+    expect(exports.TargetManager).toBeDefined();
+    expect(exports.MockServerImpl).toBeDefined();
+  });
 });

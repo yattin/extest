@@ -4,8 +4,13 @@ module.exports = {
   roots: ['<rootDir>/test'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.(t|j)s$': ['ts-jest', {
+      tsconfig: {
+        module: 'commonjs'
+      }
+    }],
   },
+  transformIgnorePatterns: [],
   setupFilesAfterEnv: ['<rootDir>/test/setup.ts'],
   globalTeardown: '<rootDir>/test/teardown.ts',
   collectCoverageFrom: [
@@ -16,15 +21,7 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   testTimeout: 30000,
   maxWorkers: 1, // 避免端口冲突
-  extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        module: 'commonjs'
-      }
-    }
-  }
 };
