@@ -1,5 +1,5 @@
 {
-  "name": "browser-extension-test-framework",
+  "name": "extest",
   "version": "1.0.0",
   "description": "CDP-based browser extension integration testing framework",
   "main": "dist/index.js",

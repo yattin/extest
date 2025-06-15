@@ -1,4 +1,4 @@
-# 浏览器扩展测试框架
+# Extest - 浏览器扩展测试框架
 
 一个基于 Chrome DevTools Protocol (CDP) 的浏览器扩展端到端测试框架，专为 Manifest V3 设计。
 
