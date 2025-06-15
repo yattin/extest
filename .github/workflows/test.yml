@@ -1,47 +1,52 @@
-name: Extension Tests
+name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         node-version: [18, 20]
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 8
+
+    - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    
+        cache: 'pnpm'
+
     - name: Install dependencies
       run: pnpm install
-    
+
+    - name: Lint code
+      run: pnpm run lint
+
     - name: Build framework
       run: pnpm run build
-    
-    - name: Setup display
-      run: |
-        export DISPLAY=:99
-        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-    
+
     - name: Run tests
-      run: pnpm run test:ci
+      uses: GabrielBB/xvfb-action@v1
+      with:
+        run: pnpm test -- --coverage
       env:
         CI: true
-    
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage/lcov.info
-        flags: unittests
-        name: codecov-umbrella
