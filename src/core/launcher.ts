@@ -14,13 +14,7 @@ export class ChromeLauncher {
       config.headless ? '--headless=new' : '',
       `--disable-extensions-except=${config.extensionPath}`,
       `--load-extension=${config.extensionPath}`,
-      // `--remote-debugging-port=${config.debugPort || 9222}`,
-      // '--no-sandbox',
-      // '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      // '--disable-web-security',
-      // '--disable-features=TranslateUI',
-      // '--disable-ipc-flooding-protection',
       ...(config.chromeFlags || [])
     ].filter(Boolean);
 
