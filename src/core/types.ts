@@ -3,6 +3,7 @@ import { ChildProcess } from 'child_process';
 
 export interface ExtensionTestConfig {
   extensionPath: string;
+  userDataDir?: string;
   headless?: boolean;
   debugPort?: number;
   chromeFlags?: string[];

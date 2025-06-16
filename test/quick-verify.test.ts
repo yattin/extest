@@ -1,4 +1,4 @@
-import ExtensionTestFramework from '../src';
+import { ExtensionTestFramework, ChromeLauncher, ExtensionDriverImpl, TargetManager, MockServerImpl } from '../src';
 
 describe('Framework Quick Verification', () => {
   test('should load framework without errors', () => {
@@ -14,10 +14,9 @@ describe('Framework Quick Verification', () => {
   });
 
   test('should export all required types and classes', () => {
-    const exports = require('../dist/index.js');
-    expect(exports.ChromeLauncher).toBeDefined();
-    expect(exports.ExtensionDriverImpl).toBeDefined();
-    expect(exports.TargetManager).toBeDefined();
-    expect(exports.MockServerImpl).toBeDefined();
+    expect(ChromeLauncher).toBeDefined();
+    expect(ExtensionDriverImpl).toBeDefined();
+    expect(TargetManager).toBeDefined();
+    expect(MockServerImpl).toBeDefined();
   });
 });

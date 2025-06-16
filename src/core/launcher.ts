@@ -1,4 +1,4 @@
-import { launch } from 'chrome-launcher';
+import chromeLauncher, { launch } from 'chrome-launcher';
 import puppeteer from 'puppeteer-core';
 import { ExtensionTestConfig, ChromeInstance } from './types';
 
@@ -18,10 +18,16 @@ export class ChromeLauncher {
       ...(config.chromeFlags || [])
     ].filter(Boolean);
 
-    const chrome = await launch({
+    const chromeOptions: chromeLauncher.Options = {
       chromeFlags,
       handleSIGINT: false,
-    });
+    };
+
+    if (config.userDataDir) {
+      chromeOptions.userDataDir = config.userDataDir;
+    }
+
+    const chrome = await launch(chromeOptions);
 
     console.log(`Chrome launched with PID: ${chrome.pid} on port: ${chrome.port}`);
 
